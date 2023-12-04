@@ -1,6 +1,8 @@
 <template>
   <div class="hello">
     <h1>{{ msg }}</h1>
+    <img class="rounded-image" alt="Vue logo" src="../assets/0288BE49-7868-4B64-A366-E9BB9EEF59DA.jpg">
+    <br/>
     <div class="job-title">
       <p>
         創科實習生

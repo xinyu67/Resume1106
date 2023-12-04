@@ -1,52 +1,94 @@
 <template>
     <div>
-        <h1 class="message-board-title" style="color: #5A5AAD;">留言板</h1>
-        <textarea v-model="newMessage" class="message-input" rows="5" cols="30" placeholder="新增留言"></textarea><br>
-        <button @click="addMessage" class="send-button">送出</button>
-
-        <div class="message-history">
-            <h2 class="history-header">歷史留言</h2>
-            <ul class="history-list">
-                <li v-for="(message, index) in messageHistory" :key="index" class="history-item">
-                    <div class="message-text">{{ message }}</div>
-                    <div class="message-actions">
-                        <button @click="editMessage(index)">編輯</button>
-                        <button @click="deleteMessage(index)">刪除</button>
-                    </div>
-                </li>
-            </ul>
-        </div>
+      <h1 class="message-board-title" style="color: #5A5AAD;">留言板</h1>
+      <textarea v-model="message" class="message-input" rows="5" cols="30" :placeholder="isEditing ? '編輯留言' : '新增留言'"></textarea><br>
+    <button @click="isEditing ? saveEditedMessage() : addMessage()" class="send-button">{{ isEditing ? '儲存' : '送出' }}</button>
+    <button @click="isEditing ? saveEditedMessage() : addMessage()" class="send-button" v-if="loggedIn">{{ isEditing ? '儲存' : '送出' }}</button>
+      <div class="message-history">
+        <h2 class="history-header">歷史留言</h2>
+        <ul class="history-list">
+            <li v-for="(message, index) in messageHistory" :key="index" class="history-item">
+                <div class="message-text">{{ message.content }}</div> 
+                <div class="message-actions">
+                    <button @click="editMessage(message.id, message.content)">編輯</button>
+                    <button @click="deleteMessage(message.id)">刪除</button>
+                </div>
+            </li>
+        </ul>
+      </div>
     </div>
-</template>
+  </template>
 
 <script>
-    export default {
-        data() {
-            return {
-                messages: [],
-                newMessage: "",
-                messageHistory: [],
-                isEditing: false,
-                editIndex: null,
-            };
-        },
-    methods: {
-        addMessage() {
-            if (this.newMessage.trim() !== "") {
-                this.messages.push(this.newMessage);
-                this.messageHistory.push(this.newMessage);
-                this.newMessage = "";
-            }
-        },
-        editMessage(index) {
-            this.isEditing = true;
-            this.editIndex = index;
-            this.newMessage = this.messageHistory[index];
-        },
-        deleteMessage(index) {
-            this.messageHistory.splice(index, 1);
-        },
+import axios from 'axios';
+
+export default {
+  data() {
+    return {
+      message: "",
+      messageHistory: [],
+    };
+  },
+  mounted() {
+    this.fetchMessages();
+  },
+  methods: {
+    async fetchMessages() {
+      try {
+        const response = await axios.get('http://localhost:3000/getmessages');
+        this.messageHistory = response.data.messages;
+      } catch (error) {
+        console.error('取得留言失敗:', error);
+      }
     },
+    async addMessage() {
+      try {
+        if (this.message.trim() !== "") {
+          const response = await axios.post('http://localhost:3000/addMessage', {
+            message: this.message
+          });
+          console.log(response.data.message);
+          this.fetchMessages(); // 重新載入留言列表
+          this.message = "";
+        }
+      } catch (error) {
+        console.error('新增留言失敗:', error);
+      }
+    },
+    async deleteMessage(id) {
+        try {
+            const response = await axios.delete(`http://localhost:3000/deleteMessage/${id}`);
+            console.log(response.data.message);
+            this.fetchMessages(); // 重新載入留言列表
+        } catch (error) {
+            console.error('刪除留言失敗:', error);
+        }
+    },
+    async editMessage(messageId, content) {
+      // 開始編輯留言
+      this.isEditing = true;
+      this.editedMessageId = messageId;
+      this.message = content;
+    },
+    async saveEditedMessage() {
+      // 儲存編輯後的留言
+      const messageId = this.editedMessageId;
+      if (messageId) {
+        // 透過 API 更新留言內容
+        try {
+          const response = await axios.put(`http://localhost:3000/editMessage/${messageId}`, {
+            content: this.message,
+          });
+          console.log(response.data.message);
+          this.fetchMessages(); // 重新載入留言列表
+          this.isEditing = false; // 關閉編輯模式
+          this.editedMessageId = null;
+          this.message = ''; // 清空輸入框
+        } catch (error) {
+          console.error('編輯留言失敗:', error);
+        }
+      }},
+  },
 };
 </script>
 
